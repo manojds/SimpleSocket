@@ -13,6 +13,7 @@
 
 #include <cstdlib>
 #include <unistd.h>
+#include <gtest/gtest.h>
 
 #include "SimpleSocket.h"
 
@@ -22,20 +23,13 @@ using namespace network_utils;
 /*
  * 
  */
-int main(int argc, char** argv) {
+int main(int argc, char** argv) 
+{
     
-    SimpleSocket sock;
-    sock.testLog();
-    sock.listen("9095",10);
-    sleep(5);
-    
-    const char* buffer = "Sample Data";
-    
-    SimpleSocket newSock;
-    sock.accept(newSock);
-    newSock.sendData(buffer, 5);
-    sleep(1000);
+    ::testing::InitGoogleTest(&argc, argv);
 
-    return 0;
+    
+
+    return RUN_ALL_TESTS();
 }
 

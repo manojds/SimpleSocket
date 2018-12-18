@@ -21,11 +21,19 @@ namespace network_utils
         ~SimpleSocket();
         
         
-        SimpleSocketErrCodes connectToServer(const std::string& server_name,const std::string& port);
-        SimpleSocketErrCodes listen(const std::string& port, int back_log_size = 10);
-        SimpleSocketErrCodes accept(SimpleSocket & _NewConnection);
-        SimpleSocketErrCodes sendData(const char * buffer, int byte_count, bool non_blocking = false);
-        SimpleSocketErrCodes sendAllData(const char * buffer, int & byte_count);
+        void connectToServer(const std::string& server_name,const std::string& port);
+        void listen(const std::string& port, int back_log_size = 10);
+        void accept(SimpleSocket & _NewConnection);
+        int  sendData(const char * buffer, int byte_count, bool non_blocking = false);
+        void sendAllData(const char * buffer, int byte_count, int& sent_count);
+        int receiveData(char * buffer, int buffer_size, bool non_blocking = false); 
+        int receiveAllData(char * buffer, int & byte_count);
+        SimpleSocketErrCodes close();
+        
+        bool setSocketOption(SimpleSocketOptions option);
+        SimpleSocketReadyStates waitTillSocketIsReady(bool wait_for_read, bool wait_for_write, long wait_time_ms);
+        
+        std::string getConnDescription();
         
         
 //        string GetErrorDescription(SimpleSocketErrCodes error_code);

@@ -15,22 +15,31 @@ enum class SimpleSocketOptions
     FlushImmediately
 };
 
+enum class SimpleSocketReadyStates
+{
+    TimeOutOccured                  = 0,
+    ReadyForRead                    = 1,
+    ReadyForWrite                   = 2,
+    ReadForReadAndWrite             = 3,
+    ErrorWhileWaiting               = 4 
+};
 
 enum class SimpleSocketErrCodes
 {
-    Success                 = 0,
-    IpPortResolveError      = -1,
-    ResourceLimitReached    = -2,
-    FailedToConnect         = -3,
-    PortAlreadyInUse        = -4,
-    WouldBlock              = -5,
-    FailedToAcceptConn      = -6,
-    Retry                   = -7,
-    SocketError             = -8,
-    ReceiveFailed           = -9,
-    NotConnected            = -10,
-    GenericError            = -11,
-    NotListening            = -12            
+    Success                         = 1,
+    ConnectionClosedByOtherParty    = 0,
+    IpPortResolveError              = -1,
+    ResourceLimitReached            = -2,
+    FailedToConnect                 = -3,
+    PortAlreadyInUse                = -4,
+    WouldBlock                      = -5,
+    FailedToAcceptConn              = -6,
+    Retry                           = -7,
+    SocketError                     = -8,
+    ReceiveFailed                   = -9,
+    NotConnected                    = -10,
+    GenericError                    = -11,
+    NotListening                    = -12            
     
 };
 
