@@ -44,6 +44,9 @@ void EchoServer::startServer(const std::string& port)
             while (true) 
             {
                 int byte_count = client_socket.receiveData(buffer, buffer_size);
+                if (byte_count <= 0)
+                    continue;
+                
                 int sent_count = 0;
                 client_socket.sendAllData(buffer, byte_count,sent_count);
                 memset(buffer,'\0',buffer_size);

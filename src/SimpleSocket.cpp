@@ -27,7 +27,9 @@ using namespace network_utils;
 
 SimpleSocket::SimpleSocket():
         socket_fd(-1),
-        socket_desc("Un-named Socket")
+        socket_desc("Un-named Socket"),
+        last_error(SimpleSocketErrCodes::NoError),
+        last_error_str("No Error")
 {
     
 }
@@ -54,7 +56,7 @@ SimpleSocket::~SimpleSocket()
  */
 void SimpleSocket::connectToServer(const std::string & server_name, const std::string & port)
 {
-    const char* log_token="SimpleSocket::Connect";
+    clearLastError();
     
     struct addrinfo aihints, *pai_servinfo, *pai_Itr;
 
@@ -66,8 +68,7 @@ void SimpleSocket::connectToServer(const std::string & server_name, const std::s
     int ret = getaddrinfo(server_name.c_str(), port.c_str(), &aihints, &pai_servinfo);
 
     if(ret != 0)
-    {      
-        //Logger::logWarnning(log_token,"Error while  resolving the Combination of <RemoteHost ,Port> System reports error<%d:%s>. Socket object <%p>",ret, gai_strerror(ret),this);
+    {
         std::stringstream strm;
         strm<<"Failed to Resolve IP Port combination of ["<<server_name <<":"<< port <<"]. System Error["<< ret <<":"<< gai_strerror(ret) <<"]";
         throw SimpleSocketException( SimpleSocketErrCodes::IpPortResolveError, strm.str().c_str() );
@@ -75,8 +76,7 @@ void SimpleSocket::connectToServer(const std::string & server_name, const std::s
 
     //check whether pai_Itr is null that means cannot resolve the hostname
     if(pai_servinfo == NULL)
-    {
-        //Logger::logWarnning(log_token, "Bad Combination of Remote Host and Remote Port. Socket object <%p>",this);               
+    {               
         std::stringstream strm;
         strm<<"Bad Combination of Remote Host and Remote Port ["<< server_name <<":"<< port <<"]";
         throw SimpleSocketException( SimpleSocketErrCodes::IpPortResolveError, strm.str().c_str() );        
@@ -85,8 +85,7 @@ void SimpleSocket::connectToServer(const std::string & server_name, const std::s
     int local_sock_fd = socket(SOCKET_FAMILY,SOCK_STREAM,0);
 
     if(local_sock_fd == -1)
-    {
-        //Logger::logWarnning(log_token,"Error while creating the socket system reports error<%d:%s>. Socket object <%p>",errno, getErrnoAsString().c_str(),this);
+    {        
         freeaddrinfo(pai_servinfo);
         
         std::stringstream strm;
@@ -103,8 +102,7 @@ void SimpleSocket::connectToServer(const std::string & server_name, const std::s
         break;
     }
     if(pai_Itr == NULL)
-    {//failed to connect
-        //Logger::logError(log_token,"Failed To connect to <%s> Port<%s> System reports Error<%d:%s>",server_name.c_str(),port.c_str(),errno, getErrnoAsString().c_str());
+    {//failed to connect        
         ::close(local_sock_fd);
         freeaddrinfo(pai_servinfo);
         
@@ -118,12 +116,7 @@ void SimpleSocket::connectToServer(const std::string & server_name, const std::s
     char remote_host_name[INET6_ADDRSTRLEN];
     inet_ntop(pai_Itr->ai_family,get_in_addr((struct sockaddr *)pai_Itr->ai_addr),remote_host_name, sizeof remote_host_name);
     //we need to free the addrinfo structure linked list
-    freeaddrinfo(pai_servinfo); 
-    
-    //we are here means, we are connected.
-    Logger::logInfo(log_token,"Successfully connected to Remote Host<%s> and Port <%s>. Socket object <%p>. Socket FD <%d>",remote_host_name, port.c_str(),this, socket_fd);
-    
-    //TODO:: loginfo the local port and IP too
+    freeaddrinfo(pai_servinfo);
    
 }
 
@@ -141,10 +134,10 @@ void SimpleSocket::connectToServer(const std::string & server_name, const std::s
  */
 void SimpleSocket::listen(const std::string& port, int back_log_size)
 {
-    //const char * log_token="SimpleSocket::Listen";
-    int port_reuse=1;                                  //for port reuse
-    struct addrinfo hints, *ai, *pItr;
+    clearLastError();    
     
+    int port_reuse=1;                                  //for port reuse
+    struct addrinfo hints, *ai, *pItr;    
 
     //initializing hints structure which we pass to getaddrinfo
     memset(&hints,0 ,sizeof hints);
@@ -156,16 +149,12 @@ void SimpleSocket::listen(const std::string& port, int back_log_size)
     ret = getaddrinfo(NULL,port.c_str(),&hints,&ai);
     if(ret!=0)
     {        
-        //Logger::logWarnning(log_token, "Failed to resolve interface address and the port combination. System reports error <%d:%s>. Socket Object <%p>",ret,gai_strerror(ret),this);
-        
         std::stringstream strm;
         strm<<"Failed to resolve interface address and the port combination. Port ["<<port<<"]. System Error["<<ret<<":"<< gai_strerror(ret) <<"]";
         throw SimpleSocketException( SimpleSocketErrCodes::IpPortResolveError, strm.str().c_str() );        
     }
     if(ai == NULL)
     {        
-        //Logger::logWarnning(log_token, "Bad combination of interface address and the port. Socket Object <%p>",this);
-        
         std::stringstream strm;
         strm<<"Bad combination of interface address and the port. Port ["<<port<<"]";
         throw SimpleSocketException( SimpleSocketErrCodes::IpPortResolveError, strm.str().c_str() );          
@@ -175,8 +164,7 @@ void SimpleSocket::listen(const std::string& port, int back_log_size)
     {
         socket_fd = socket(pItr->ai_family,pItr->ai_socktype,pItr->ai_protocol);
         if(socket_fd<0)
-        {  
-            //Logger::logWarnning(log_token, "Socket system call failed. System reports error<%d:%s>. Socket Object<%p>",errno,getErrnoAsString().c_str(), this);
+        { 
             continue;
         }
         //Make the port reusable
@@ -184,7 +172,6 @@ void SimpleSocket::listen(const std::string& port, int back_log_size)
 
         if (bind(socket_fd, pItr->ai_addr, pItr->ai_addrlen) < 0)
         {
-            //Logger::logWarnning(log_token, "Bind system call failed. System reports error<%d:%s>.Socket Object<%p>",errno, getErrnoAsString().c_str(), this);
             ::close(socket_fd);
             continue;
         }
@@ -194,7 +181,6 @@ void SimpleSocket::listen(const std::string& port, int back_log_size)
 
     if(pItr==NULL)
     {
-        //Logger::logError(log_token, "Failed to bind  on port [%s]. System reports error <%d:%s>.Socket Object<%p>",port.c_str(),errno, getErrnoAsString().c_str(),this);
         freeaddrinfo(ai);
         
         std::stringstream strm;
@@ -206,7 +192,6 @@ void SimpleSocket::listen(const std::string& port, int back_log_size)
 
     if(::listen(socket_fd, back_log_size) == -1)                
     {
-        //Logger::logError(log_token, "Failed to Listen on port [%s]. System reports error <%d:%s>. Socket Object<%p>",port.c_str(),errno, getErrnoAsString().c_str(),this);
         ::close(socket_fd);        
         
         std::stringstream strm;
@@ -229,10 +214,10 @@ void SimpleSocket::listen(const std::string& port, int back_log_size)
  * </ul>
  * 
  */
-void SimpleSocket::accept(SimpleSocket & new_conn)
+bool SimpleSocket::accept(SimpleSocket & new_conn)
 {
-    const char * log_token="SimpleSocket::accept";
-    char remoteIP[INET6_ADDRSTRLEN];
+    clearLastError();
+    
     struct sockaddr_storage remoteaddr; // client address
 
     socklen_t addrlen;
@@ -251,9 +236,7 @@ void SimpleSocket::accept(SimpleSocket & new_conn)
             throw SimpleSocketException( SimpleSocketErrCodes::WouldBlock, "Accept operation would block" );              
         }
         else
-        {
-            //Logger::logWarnning(log_token, "Error while Accepting a new Client. System reports error <%d:%s>.Socket object <%p>",errno,getErrnoAsString().c_str(),this);
-            
+        {            
             std::stringstream strm;
             strm<<"Failed to accept the client. System Error["<<errno<<":"<< getErrnoAsString() <<"]";
             throw SimpleSocketException( SimpleSocketErrCodes::FailedToAcceptConn, strm.str().c_str() );             
@@ -261,8 +244,6 @@ void SimpleSocket::accept(SimpleSocket & new_conn)
     }
     else
     {
-        //We got a new Client        
-        Logger::logInfo(log_token, "Accepted a new Client Connection from [%s]. Socket FD <%d>",inet_ntop(remoteaddr.ss_family,get_in_addr((struct sockaddr*)&remoteaddr),remoteIP, INET6_ADDRSTRLEN), socket_fd);
         new_conn.socket_fd = client_fd;
     }    
 }
@@ -286,7 +267,8 @@ void SimpleSocket::accept(SimpleSocket & new_conn)
  */
 int SimpleSocket::sendData(const char * buffer, int byte_count, bool non_blocking /*= false*/)
 {
-    const char * log_token="SimpleSocket::sendData";
+    clearLastError();
+    
     int ret_send(-1);
     int send_flags = MSG_NOSIGNAL;
     
@@ -295,13 +277,12 @@ int SimpleSocket::sendData(const char * buffer, int byte_count, bool non_blockin
         send_flags = send_flags | MSG_DONTWAIT;
     }
     
-    ret_send=send(socket_fd,buffer,byte_count,send_flags);
+    ret_send = send(socket_fd,buffer,byte_count,send_flags);
 
     if(ret_send<0)
     {
         if((errno==EAGAIN)||(errno==EWOULDBLOCK))
         {
-            //Logger::logDebug(log_token, "Sending is blocking. send returned <%d:%s>. Socket Object <%p>",errno,getErrnoAsString().c_str(),this);
             
             std::stringstream strm;
             strm<<"Sending is blocking. System Error["<<errno<<":"<< getErrnoAsString() <<"]";
@@ -310,15 +291,12 @@ int SimpleSocket::sendData(const char * buffer, int byte_count, bool non_blockin
         }
         else if(errno == EINTR)
         {//signal is caught before send any data. retry..
-            //Logger::logDebug(log_token, "Signal is caught while sending data. retrying. Socket Object t <%p>",this);
             
-            throw SimpleSocketException( SimpleSocketErrCodes::Retry, "Signal is caught while sending data" ); 
+            throw SimpleSocketException( SimpleSocketErrCodes::Interrupted, "Signal is caught while sending data" ); 
         }
         else
         {
             //error while sending
-            //Logger::logWarnning(log_token, "Error while writing to the network socket. System reports error <%d:%s>. Socket Object <%p>>",
-            // errno,getErrnoAsString().c_str(),this);
             
             std::stringstream strm;
             strm<<"Error while writing to the network socket. System Error["<<errno<<":"<< getErrnoAsString() <<"]";
@@ -327,7 +305,7 @@ int SimpleSocket::sendData(const char * buffer, int byte_count, bool non_blockin
     }
     else if(ret_send==0)
     {
-        //Logger::logDebug(log_token, "Zero number of bytes have been specified to send. Socket <%p>", this);
+        //Zero number of bytes have been specified to send. 
     }
     //else some bytes have been sent
 
@@ -356,7 +334,6 @@ int SimpleSocket::sendData(const char * buffer, int byte_count, bool non_blockin
  */
 void SimpleSocket::sendAllData(const char * buffer, int byte_count, int& sent_count)
 {
-
     sent_count = 0;                  //number bytes sent so far
     int res_val(-1);                        //response from the send
     //stop if error occurred or all the data have been transmitted.
@@ -378,7 +355,7 @@ void SimpleSocket::sendAllData(const char * buffer, int byte_count, int& sent_co
         catch (SimpleSocketException& ex)
         {
             if( (ex.getErrorCode() == SimpleSocketErrCodes::WouldBlock ) ||
-                    ex.getErrorCode() == SimpleSocketErrCodes::Retry )
+                    ex.getErrorCode() == SimpleSocketErrCodes::Interrupted )
             {//if operation is blocking, or the return code is retry we should retry
                 continue;
             }
@@ -410,8 +387,8 @@ void SimpleSocket::sendAllData(const char * buffer, int byte_count, int& sent_co
  * 
  */
 int SimpleSocket::receiveData(char * buffer, int buffer_size, bool non_blocking /* = false*/)
-{
-    const char * pLogToken="CSocket::ReceiveData";
+{    
+    clearLastError();
     
     int iResBytes(-1);          //Number of bytes we could receive    
     int iFlags(0);              //Flags for recv function
@@ -434,14 +411,12 @@ int SimpleSocket::receiveData(char * buffer, int buffer_size, bool non_blocking 
         else if(errno == EINTR)
         {//signal was caught before receive any data, 
             //just return with  return code "Retry" so that caller will try again.
-            error_code = SimpleSocketErrCodes::Retry;            
+            error_code = SimpleSocketErrCodes::Interrupted;            
         }
         else
-        {//Something bad with socket             
-            //Logger::logDebug(log_token, "Socket error while receiving. System reports error [%d:%s]. Socket Object <%p>>", errno, getErrnoAsString().c_str(), this);
+        {//Something bad with socket
             error_code = SimpleSocketErrCodes::SocketError;
         }
-
 		
         std::stringstream strm;
         strm<<"Error while receiving data. System Error["<< errno <<":"<< getErrnoAsString() <<"]";
@@ -490,7 +465,7 @@ int SimpleSocket::receiveAllData(char * buffer, int & byte_count)
         catch (SimpleSocketException& ex)
         {
             if( (ex.getErrorCode() == SimpleSocketErrCodes::WouldBlock ) ||
-                    ex.getErrorCode() == SimpleSocketErrCodes::Retry )
+                    ex.getErrorCode() == SimpleSocketErrCodes::Interrupted )
             {//if operation is blocking, or the return code is retry we should retry
                 continue;
             }
@@ -500,9 +475,7 @@ int SimpleSocket::receiveAllData(char * buffer, int & byte_count)
                 throw;
             }            
         }
-
     }
-
     //update the number of bytes received.
     byte_count = iBytesReceived;
     return iRes;
@@ -521,15 +494,16 @@ int SimpleSocket::receiveAllData(char * buffer, int & byte_count)
  */
 SimpleSocketErrCodes SimpleSocket::close()
 {
+    clearLastError();
+    
     SimpleSocketErrCodes error = SimpleSocketErrCodes::SocketError;
     
     int iRet = ::close(socket_fd);
     if(iRet < 0)
     {
-        //g_Tracer.LogFDetail(pLogToken,"Error while closing the socket. System reports error <%d:%s>. Socket object <%p>. Socket FD <%d>.",errno,GetErrorDescription(errno).c_str(),this, socket_fd);
-        if(errno==EINTR)
+        if(errno == EINTR)
         {
-            error = SimpleSocketErrCodes::Retry;
+            error = SimpleSocketErrCodes::Interrupted;
         }
         else
         {
@@ -537,8 +511,7 @@ SimpleSocketErrCodes SimpleSocket::close()
         }
     }
     
-    return error;   
-    
+    return error;    
 }
 
 
@@ -565,8 +538,8 @@ SimpleSocketErrCodes SimpleSocket::close()
  * 
  */
 SimpleSocketReadyStates SimpleSocket::waitTillSocketIsReady(bool wait_for_read, bool wait_for_write, long wait_time_ms)
-{
-    const char * pLogToken="CSocket::WaitTillSocketIsReady";
+{   
+    clearLastError();
     
     SimpleSocketReadyStates iRet = SimpleSocketReadyStates::ErrorWhileWaiting;        //return value of the function
     fd_set read_fd_set;   //read FD set
@@ -594,13 +567,12 @@ SimpleSocketReadyStates SimpleSocket::waitTillSocketIsReady(bool wait_for_read, 
     int iRes = select(socket_fd+1, &read_fd_set, &write_fd_set, NULL,  wait_timeval_struct);
 
     if(iRes<0)
-    {//select returned an error
-        //g_Tracer.LogFDetail(pLogToken, "Select returned error. System reports error <%d:%s>. Socket object <%p>. Socket FD <%d>.",errno,GetErrorDescription(errno).c_str(),this, socket_fd);     
+    {//select returned an error   
         SimpleSocketErrCodes error_code = SimpleSocketErrCodes::GenericError;
         switch(errno)
         {
             case EINTR:
-                error_code = SimpleSocketErrCodes::Retry; //read is may be still blocking    
+                error_code = SimpleSocketErrCodes::Interrupted; //read is may be still blocking    
                 break;
                 
             case ENOMEM:
@@ -641,11 +613,11 @@ SimpleSocketReadyStates SimpleSocket::waitTillSocketIsReady(bool wait_for_read, 
                 }
             } 
         }
-//        else
-//        {  //error this can't happen, because if select returned positive value the FD should be ready          
-//            g_Tracer.LogFDetail(pLogToken,"Invalid state. select returned, positive value <%d>. but FD is not ready. SocketFD <%d>. socket object <%p>",socket_fd, this);
-//            iRet=E_GENERIC;
-//        }        
+        else
+        {  
+            //error this can't happen, because if select returned positive value the FD should be ready          
+            assert(false);
+        }        
     }
     else
     {//this means a timeout
@@ -682,51 +654,31 @@ std::string SimpleSocket::getConnDescription()
  * @return 
  * true on success , false on failure
  */
-bool SimpleSocket::setSocketOption(SimpleSocketOptions option)
+void SimpleSocket::setSocketOption(SimpleSocketOptions option)
 {
-    const char * pLogToken="CSocket::SetSocketOption";
-    bool ret_val(false);
-    int flags(0);
+    clearLastError();
     
+    int flags(0);    
     int result = -1;
-
     
     switch(option)
     {
         case SimpleSocketOptions::NonBlocking:
             
-            if((flags = fcntl (socket_fd, F_GETFL, 0))<0)
-            {
-                //g_Tracer.LogFDetail(pLogToken,"Error On getting current options to set the Socket to non blocking mode. Discarding the request. SocketFD <%d>. Socket object <%p>",socket_fd, this);
-            }
-            else
-            {
-                flags |= O_NONBLOCK;
-                if((fcntl(socket_fd, F_SETFL, flags) )==-1)
-                {
-                    //g_Tracer.LogFDetail(pLogToken,"Error On setting Socket to non blocking mode.request failed. SocketFD <%d>. Socket object <%p>",socket_fd, this);
-                }
-                else
-                    ret_val=true;
-            }             
+            flags = getCurrentFDStutusFlags();
+            
+            flags |= O_NONBLOCK;
+            
+            setFDStutusFlags(flags, "NonBlocking");
+            
             break;
             
         case SimpleSocketOptions::Blocking:
             
-            if((flags = fcntl (socket_fd, F_GETFL, 0))<0)
-            {
-                //g_Tracer.LogFDetail(pLogToken,"Error On getting current options to set the Socket to blocking mode. Discarding the request. SocketFD <%d>. Socket object <%p>",socket_fd, this);
-            }
-            else
-            {
-                flags &= ~O_NONBLOCK;
-                if((fcntl(socket_fd, F_SETFL, flags) )==-1)
-                {
-                    //g_Tracer.LogFDetail(pLogToken,"Error On setting Socket to blocking mode.request failed. SocketFD <%d>. Socket object <%p>",socket_fd, this);
-                }
-                else
-                    ret_val=true;
-            }             
+            flags = getCurrentFDStutusFlags();
+            flags &= ~O_NONBLOCK;
+            setFDStutusFlags(flags, "Blocking");
+                       
             break;
             
         case SimpleSocketOptions::FlushImmediately:            
@@ -736,19 +688,60 @@ bool SimpleSocket::setSocketOption(SimpleSocketOptions option)
             result = setsockopt(socket_fd, IPPROTO_TCP,  TCP_NODELAY, (char *) &flags, sizeof(int));
 
             if (result < 0)
-            {
-                //g_Tracer.LogFDetail(pLogToken,"Error while setting the socket option, FLUSH_IMMEDIATELY . System reports error<%d:%s>. SocketFD <%d>. Socket object <%p>",errno,GetErrorDescription(errno).c_str(), socket_fd, this);
-            } 
-            else
-                ret_val=true;
+            {             
+                throw SimpleSocketException( SimpleSocketErrCodes::FailedToSetSocketOption, "Failed to set socket option [FlushImmediately]"); 
+            }
             break;
             
         default:
-            //g_Tracer.LogFDetail(pLogToken,"Error : Invalid socket option <%d> has been specified. SocketFD <%d>. Socket object <%p>",_tOption, socket_fd, this);
+            assert(false);
             break;
     }
-    return ret_val;
     
+}
+
+int SimpleSocket::getCurrentFDStutusFlags()
+{
+    int flags = fcntl (socket_fd, F_GETFL, 0);
+    if (flags < 0)
+    {
+        throw SimpleSocketException( SimpleSocketErrCodes::FailedToGetCurrentSocketOptions, "Failed to retrieve current socket options");         
+    }
+    
+    return flags;    
+}
+
+void SimpleSocket::setFDStutusFlags(int flags, const std::string& flag_name)
+{
+    if((fcntl(socket_fd, F_SETFL, flags) )==-1)
+    {
+        std::stringstream strm;
+        strm<<"Failed to set socket option ["<< flag_name <<"]";
+        throw SimpleSocketException( SimpleSocketErrCodes::FailedToSetSocketOption, strm.str().c_str()); 
+    }  
+}
+
+void SimpleSocket::setLastError(SimpleSocketErrCodes error, const std::string& error_str)
+{
+    last_error = error;
+    last_error_str = error_str;
+    
+}
+
+void SimpleSocket::clearLastError()
+{
+    last_error = SimpleSocketErrCodes::NoError;
+    last_error_str = "No Error";    
+}
+
+SimpleSocketErrCodes SimpleSocket::getLastError()
+{
+    return last_error;
+}
+
+std::string SimpleSocket::getLastErrorString()
+{
+    return last_error_str;
 }
 
 std::string SimpleSocket::getErrnoAsString()

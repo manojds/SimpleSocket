@@ -30,24 +30,28 @@ namespace network_utils
         int receiveAllData(char * buffer, int & byte_count);
         SimpleSocketErrCodes close();
         
-        bool setSocketOption(SimpleSocketOptions option);
+        void setSocketOption(SimpleSocketOptions option);
         SimpleSocketReadyStates waitTillSocketIsReady(bool wait_for_read, bool wait_for_write, long wait_time_ms);
         
         std::string getConnDescription();
         
+        SimpleSocketErrCodes    getLastError();
+        std::string             getLastErrorString();
         
-//        string GetErrorDescription(SimpleSocketErrCodes error_code);
         
+    private:   
+        int         getCurrentFDStutusFlags();
+        void        setFDStutusFlags(int flags, const std::string& flag_name);
+        void *      get_in_addr(struct sockaddr *sa);  
+        void        setLastError(SimpleSocketErrCodes error, const std::string& error_str);
+        void        clearLastError();
         std::string getErrnoAsString();
 
-        void testLog();
-        
-    private:      
-        void *      get_in_addr(struct sockaddr *sa);    
-
         int         socket_fd;
-        //TODO::set the description at necessary places.
         std::string socket_desc;        
+        
+        thread_local    SimpleSocketErrCodes    last_error;
+        thread_local    std::string             last_error_str;
         
     };
 }

@@ -26,6 +26,7 @@ enum class SimpleSocketReadyStates
 
 enum class SimpleSocketErrCodes
 {
+    NoError                         = 2,
     Success                         = 1,
     ConnectionClosedByOtherParty    = 0,
     IpPortResolveError              = -1,
@@ -34,12 +35,14 @@ enum class SimpleSocketErrCodes
     PortAlreadyInUse                = -4,
     WouldBlock                      = -5,
     FailedToAcceptConn              = -6,
-    Retry                           = -7,
+    Interrupted                     = -7,
     SocketError                     = -8,
     ReceiveFailed                   = -9,
     NotConnected                    = -10,
     GenericError                    = -11,
-    NotListening                    = -12            
+    NotListening                    = -12,
+    FailedToGetCurrentSocketOptions = -13,
+    FailedToSetSocketOption         = -14
     
 };
 
