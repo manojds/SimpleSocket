@@ -15,6 +15,7 @@
 #define ECHOSERVER_H
 #include <string>
 #include <thread>
+#include <mutex>
 
 namespace network_utils
 {
@@ -26,14 +27,23 @@ namespace network_utils
         
         
         bool startThread(const std::string& port);
-        bool stop();
-        bool disconnectClient();  
+        void disconnectClient();  
         void startServer(const std::string& port);
+        void stopServer();
+        
+        static int getRcvBufferSize();
         
     private:
         
-        
+        bool shouldStop();
+        bool IsDisconenctClientRequested();
+
         std::thread runner_thread;
+        
+        std::mutex  mtx;
+        bool        stop_requested = false;   
+        bool        disonnect_client_requested = false; 
+        static int  rcv_buffer_size;
         
     };    
 }

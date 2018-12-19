@@ -10,6 +10,7 @@
 #define SIMPLESOCKET_H
 #include <string>
 #include <sys/socket.h>
+#include <thread>
 #include "SimpleScoketDefs.h"
 
 namespace network_utils
@@ -23,11 +24,11 @@ namespace network_utils
         
         void connectToServer(const std::string& server_name,const std::string& port);
         void listen(const std::string& port, int back_log_size = 10);
-        void accept(SimpleSocket & _NewConnection);
+        bool accept(SimpleSocket & _NewConnection);
         int  sendData(const char * buffer, int byte_count, bool non_blocking = false);
         void sendAllData(const char * buffer, int byte_count, int& sent_count);
         int receiveData(char * buffer, int buffer_size, bool non_blocking = false); 
-        int receiveAllData(char * buffer, int & byte_count);
+        int receiveAllData(char * buffer, int buffer_size, int & byte_count);
         SimpleSocketErrCodes close();
         
         void setSocketOption(SimpleSocketOptions option);
@@ -45,13 +46,17 @@ namespace network_utils
         void *      get_in_addr(struct sockaddr *sa);  
         void        setLastError(SimpleSocketErrCodes error, const std::string& error_str);
         void        clearLastError();
+        void        throwIfNotInConnectedState();
+        void        throwIfInConnectedState();
+        void        throwIfNotInListeningState();
+        void        throwIfInNotConnectedState();
         std::string getErrnoAsString();
 
-        int         socket_fd;
-        std::string socket_desc;        
+        int                 socket_fd;
+        SimpleSocketState   state;
+        std::string         socket_desc;        
         
-        thread_local    SimpleSocketErrCodes    last_error;
-        thread_local    std::string             last_error_str;
+
         
     };
 }

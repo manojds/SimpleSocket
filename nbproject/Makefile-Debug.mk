@@ -39,7 +39,9 @@ OBJECTFILES= \
 	${OBJECTDIR}/src/LogFactory.o \
 	${OBJECTDIR}/src/SimpleSocket.o \
 	${OBJECTDIR}/src/main.o \
-	${OBJECTDIR}/test/PingPongTest.o
+	${OBJECTDIR}/test/ErrorConditionTests.o \
+	${OBJECTDIR}/test/PingPongTest.o \
+	${OBJECTDIR}/test/TestUtils.o
 
 
 # C Compiler Flags
@@ -86,10 +88,20 @@ ${OBJECTDIR}/src/main.o: src/main.cpp
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -Iinclude -Isrc -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/main.o src/main.cpp
 
+${OBJECTDIR}/test/ErrorConditionTests.o: test/ErrorConditionTests.cpp
+	${MKDIR} -p ${OBJECTDIR}/test
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -Iinclude -Isrc -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/test/ErrorConditionTests.o test/ErrorConditionTests.cpp
+
 ${OBJECTDIR}/test/PingPongTest.o: test/PingPongTest.cpp
 	${MKDIR} -p ${OBJECTDIR}/test
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -Iinclude -Isrc -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/test/PingPongTest.o test/PingPongTest.cpp
+
+${OBJECTDIR}/test/TestUtils.o: test/TestUtils.cpp
+	${MKDIR} -p ${OBJECTDIR}/test
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -Iinclude -Isrc -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/test/TestUtils.o test/TestUtils.cpp
 
 # Subprojects
 .build-subprojects:

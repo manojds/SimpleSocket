@@ -8,6 +8,13 @@
 #ifndef SIMPLESCOKETDEFS_H
 #define SIMPLESCOKETDEFS_H
 
+enum class SimpleSocketState
+{
+    NotConnected,
+    Connected,
+    Listening
+};
+
 enum class SimpleSocketOptions
 {
     NonBlocking,
@@ -21,7 +28,7 @@ enum class SimpleSocketReadyStates
     ReadyForRead                    = 1,
     ReadyForWrite                   = 2,
     ReadForReadAndWrite             = 3,
-    ErrorWhileWaiting               = 4 
+    InterruptedWhileWaiting               = 4 
 };
 
 enum class SimpleSocketErrCodes
@@ -42,7 +49,8 @@ enum class SimpleSocketErrCodes
     GenericError                    = -11,
     NotListening                    = -12,
     FailedToGetCurrentSocketOptions = -13,
-    FailedToSetSocketOption         = -14
+    FailedToSetSocketOption         = -14,
+    InsufficientBufferSize          = -15
     
 };
 

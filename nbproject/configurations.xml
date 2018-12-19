@@ -9,6 +9,7 @@
       <itemPath>include/SimpleScoketDefs.h</itemPath>
       <itemPath>include/SimpleSocket.h</itemPath>
       <itemPath>include/SimpleSocketExceptions.h</itemPath>
+      <itemPath>test/TestUtils.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles"
                    displayName="Resource Files"
@@ -20,10 +21,12 @@
       <itemPath>src/DefaultLogSink.h</itemPath>
       <itemPath>src/EchoServer.cpp</itemPath>
       <itemPath>src/EchoServer.h</itemPath>
+      <itemPath>test/ErrorConditionTests.cpp</itemPath>
       <itemPath>src/LogFactory.cpp</itemPath>
       <itemPath>src/Logger.h</itemPath>
       <itemPath>test/PingPongTest.cpp</itemPath>
       <itemPath>src/SimpleSocket.cpp</itemPath>
+      <itemPath>test/TestUtils.cpp</itemPath>
       <itemPath>src/main.cpp</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
@@ -81,7 +84,13 @@
       </item>
       <item path="src/main.cpp" ex="false" tool="1" flavor2="0">
       </item>
+      <item path="test/ErrorConditionTests.cpp" ex="false" tool="1" flavor2="0">
+      </item>
       <item path="test/PingPongTest.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="test/TestUtils.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="test/TestUtils.h" ex="false" tool="3" flavor2="0">
       </item>
     </conf>
     <conf name="Release" type="1">
@@ -128,7 +137,13 @@
       </item>
       <item path="src/main.cpp" ex="false" tool="1" flavor2="0">
       </item>
+      <item path="test/ErrorConditionTests.cpp" ex="false" tool="1" flavor2="0">
+      </item>
       <item path="test/PingPongTest.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="test/TestUtils.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="test/TestUtils.h" ex="false" tool="3" flavor2="0">
       </item>
     </conf>
   </confs>

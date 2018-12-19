@@ -20,6 +20,11 @@
 #include "Logger.h"
 #include "SimpleSocketExceptions.h"
 
+namespace network_utils
+{
+    thread_local    SimpleSocketErrCodes    last_error      = SimpleSocketErrCodes::NoError;
+    thread_local    std::string             last_error_str  = "No Error";
+}
 
 using namespace network_utils;
 
@@ -27,9 +32,8 @@ using namespace network_utils;
 
 SimpleSocket::SimpleSocket():
         socket_fd(-1),
-        socket_desc("Un-named Socket"),
-        last_error(SimpleSocketErrCodes::NoError),
-        last_error_str("No Error")
+        state(SimpleSocketState::NotConnected),
+        socket_desc("Un-named Socket")
 {
     
 }
@@ -37,6 +41,38 @@ SimpleSocket::SimpleSocket():
 SimpleSocket::~SimpleSocket() 
 {
 
+}
+
+void SimpleSocket::throwIfInNotConnectedState()
+{
+    if (state == SimpleSocketState::NotConnected)
+    {
+        throw SimpleSocketException(SimpleSocketErrCodes::NotConnected, "Socket is in not connected state!");
+    }    
+}
+
+void SimpleSocket::throwIfNotInConnectedState()
+{
+    if (state != SimpleSocketState::Connected)
+    {
+        throw SimpleSocketException(SimpleSocketErrCodes::NotConnected, "Socket is not connected!");
+    }
+}
+
+void SimpleSocket::throwIfInConnectedState()
+{
+    if (state == SimpleSocketState::Connected)
+    {
+        throw SimpleSocketException(SimpleSocketErrCodes::NotConnected, "Socket is already connected!");
+    }
+}
+
+void SimpleSocket::throwIfNotInListeningState()
+{
+    if (state != SimpleSocketState::Listening)
+    {
+        throw SimpleSocketException(SimpleSocketErrCodes::NotListening, "Socket is not in listening state!");
+    }
 }
 
 
@@ -57,6 +93,7 @@ SimpleSocket::~SimpleSocket()
 void SimpleSocket::connectToServer(const std::string & server_name, const std::string & port)
 {
     clearLastError();
+    throwIfInConnectedState();
     
     struct addrinfo aihints, *pai_servinfo, *pai_Itr;
 
@@ -71,7 +108,7 @@ void SimpleSocket::connectToServer(const std::string & server_name, const std::s
     {
         std::stringstream strm;
         strm<<"Failed to Resolve IP Port combination of ["<<server_name <<":"<< port <<"]. System Error["<< ret <<":"<< gai_strerror(ret) <<"]";
-        throw SimpleSocketException( SimpleSocketErrCodes::IpPortResolveError, strm.str().c_str() );
+        throw ConnectionFailedException( SimpleSocketErrCodes::IpPortResolveError, strm.str().c_str() );
     }
 
     //check whether pai_Itr is null that means cannot resolve the hostname
@@ -79,7 +116,7 @@ void SimpleSocket::connectToServer(const std::string & server_name, const std::s
     {               
         std::stringstream strm;
         strm<<"Bad Combination of Remote Host and Remote Port ["<< server_name <<":"<< port <<"]";
-        throw SimpleSocketException( SimpleSocketErrCodes::IpPortResolveError, strm.str().c_str() );        
+        throw ConnectionFailedException( SimpleSocketErrCodes::IpPortResolveError, strm.str().c_str() );        
     }
 
     int local_sock_fd = socket(SOCKET_FAMILY,SOCK_STREAM,0);
@@ -90,7 +127,7 @@ void SimpleSocket::connectToServer(const std::string & server_name, const std::s
         
         std::stringstream strm;
         strm<<"Error while creating the socket . System Error["<< errno <<":"<< getErrnoAsString() <<"]";
-        throw SimpleSocketException( SimpleSocketErrCodes::ResourceLimitReached, strm.str().c_str() );         
+        throw ConnectionFailedException( SimpleSocketErrCodes::ResourceLimitReached, strm.str().c_str() );         
     }
 
     for(pai_Itr = pai_servinfo; pai_Itr != NULL; pai_Itr = pai_Itr->ai_next)
@@ -108,10 +145,11 @@ void SimpleSocket::connectToServer(const std::string & server_name, const std::s
         
         std::stringstream strm;
         strm<<"Failed to Connect to ["<< server_name <<":"<< port <<"]. System Error["<< errno <<":"<< getErrnoAsString() <<"]";
-        throw SimpleSocketException( SimpleSocketErrCodes::FailedToConnect, strm.str().c_str() );         
+        throw ConnectionFailedException( SimpleSocketErrCodes::FailedToConnect, strm.str().c_str() );         
     }
 
     socket_fd = local_sock_fd;
+    state = SimpleSocketState::Connected;
     //getting the remote host name
     char remote_host_name[INET6_ADDRSTRLEN];
     inet_ntop(pai_Itr->ai_family,get_in_addr((struct sockaddr *)pai_Itr->ai_addr),remote_host_name, sizeof remote_host_name);
@@ -197,7 +235,9 @@ void SimpleSocket::listen(const std::string& port, int back_log_size)
         std::stringstream strm;
         strm<<"Failed to listen  on port  ["<<port<<"]. System Error["<<errno<<":"<< getErrnoAsString() <<"]";
         throw SimpleSocketException( SimpleSocketErrCodes::PortAlreadyInUse, strm.str().c_str() );          
-    }   
+    } 
+    //now server socket is connected.
+    state = SimpleSocketState::Listening;
 }
 
 
@@ -232,8 +272,9 @@ bool SimpleSocket::accept(SimpleSocket & new_conn)
         {
             //this means that after select return and before we call accept the 
             //socket has been closed due to network error. So the client is not available to us.
-            //there is nothing to do here.
-            throw SimpleSocketException( SimpleSocketErrCodes::WouldBlock, "Accept operation would block" );              
+            //there is nothing to do here.   
+            setLastError(SimpleSocketErrCodes::WouldBlock, "Accept operation would block" );
+            return false;
         }
         else
         {            
@@ -245,7 +286,10 @@ bool SimpleSocket::accept(SimpleSocket & new_conn)
     else
     {
         new_conn.socket_fd = client_fd;
-    }    
+        new_conn.state = SimpleSocketState::Connected;
+    }  
+    
+    return true;
 }
 
 /*!
@@ -268,8 +312,9 @@ bool SimpleSocket::accept(SimpleSocket & new_conn)
 int SimpleSocket::sendData(const char * buffer, int byte_count, bool non_blocking /*= false*/)
 {
     clearLastError();
+    throwIfNotInConnectedState();
     
-    int ret_send(-1);
+    int bytes_sent(-1);
     int send_flags = MSG_NOSIGNAL;
     
     if(non_blocking)
@@ -277,22 +322,24 @@ int SimpleSocket::sendData(const char * buffer, int byte_count, bool non_blockin
         send_flags = send_flags | MSG_DONTWAIT;
     }
     
-    ret_send = send(socket_fd,buffer,byte_count,send_flags);
+    bytes_sent = send(socket_fd,buffer,byte_count,send_flags);
 
-    if(ret_send<0)
+    if(bytes_sent<0)
     {
         if((errno==EAGAIN)||(errno==EWOULDBLOCK))
         {
-            
+            //send operation is blocking. This happens only in non-blocking mode            
             std::stringstream strm;
             strm<<"Sending is blocking. System Error["<<errno<<":"<< getErrnoAsString() <<"]";
-            throw SimpleSocketException( SimpleSocketErrCodes::WouldBlock, strm.str().c_str() ); 
+            setLastError( SimpleSocketErrCodes::WouldBlock, strm.str()); 
+            return -1;
         
         }
         else if(errno == EINTR)
         {//signal is caught before send any data. retry..
             
-            throw SimpleSocketException( SimpleSocketErrCodes::Interrupted, "Signal is caught while sending data" ); 
+            setLastError( SimpleSocketErrCodes::Interrupted, "Signal is caught while sending data" ); 
+            return -1;
         }
         else
         {
@@ -303,13 +350,13 @@ int SimpleSocket::sendData(const char * buffer, int byte_count, bool non_blockin
             throw SimpleSocketException( SimpleSocketErrCodes::SocketError, strm.str().c_str() );             
         }
     }
-    else if(ret_send==0)
+    else if(bytes_sent==0)
     {
         //Zero number of bytes have been specified to send. 
     }
     //else some bytes have been sent
 
-    return ret_send;
+    return bytes_sent;
 }
 
 
@@ -334,7 +381,11 @@ int SimpleSocket::sendData(const char * buffer, int byte_count, bool non_blockin
  */
 void SimpleSocket::sendAllData(const char * buffer, int byte_count, int& sent_count)
 {
-    sent_count = 0;                  //number bytes sent so far
+    sent_count = 0;
+    
+    clearLastError();
+    throwIfNotInConnectedState();    
+                      //number bytes sent so far
     int res_val(-1);                        //response from the send
     //stop if error occurred or all the data have been transmitted.
     while(sent_count < byte_count)
@@ -389,8 +440,9 @@ void SimpleSocket::sendAllData(const char * buffer, int byte_count, int& sent_co
 int SimpleSocket::receiveData(char * buffer, int buffer_size, bool non_blocking /* = false*/)
 {    
     clearLastError();
+    throwIfNotInConnectedState();
     
-    int iResBytes(-1);          //Number of bytes we could receive    
+    int rcvd_byte_count(-1);          //Number of bytes we could receive    
     int iFlags(0);              //Flags for recv function
     
     if(non_blocking)
@@ -398,36 +450,40 @@ int SimpleSocket::receiveData(char * buffer, int buffer_size, bool non_blocking 
         iFlags=MSG_DONTWAIT;
     }
 
-    iResBytes = recv(socket_fd, buffer, buffer_size, iFlags);
+    rcvd_byte_count = recv(socket_fd, buffer, buffer_size, iFlags);
 
-    if(iResBytes < 0)
+    if(rcvd_byte_count < 0)
     {
-        SimpleSocketErrCodes error_code = SimpleSocketErrCodes::SocketError;
         if((errno == EAGAIN)|| (errno == EWOULDBLOCK))
         {
-            //recv operation is blocking
-            error_code = SimpleSocketErrCodes::WouldBlock;
+            //recv operation is blocking. This happens only in non-blocking mode
+            std::stringstream strm;
+            strm<<"Read operation is blocking. System Error["<< errno <<":"<< getErrnoAsString() <<"]";  
+            setLastError(SimpleSocketErrCodes::WouldBlock, strm.str()); 
+            return -1;
         }
         else if(errno == EINTR)
         {//signal was caught before receive any data, 
             //just return with  return code "Retry" so that caller will try again.
-            error_code = SimpleSocketErrCodes::Interrupted;            
+            std::stringstream strm;
+            strm<<"Read operation is interrupted by a signal. System Error["<< errno <<":"<< getErrnoAsString() <<"]";  
+            setLastError(SimpleSocketErrCodes::Interrupted, strm.str());
+            return -1;
         }
         else
         {//Something bad with socket
-            error_code = SimpleSocketErrCodes::SocketError;
-        }
-		
-        std::stringstream strm;
-        strm<<"Error while receiving data. System Error["<< errno <<":"<< getErrnoAsString() <<"]";
-        throw SimpleSocketException( error_code, strm.str().c_str() );     		
+            std::stringstream strm;
+            strm<<"Error while receiving data. System Error["<< errno <<":"<< getErrnoAsString() <<"]";
+            throw SimpleSocketException( SimpleSocketErrCodes::SocketError, strm.str().c_str() );             
+        }		
+    		
     }
-    else if (iResBytes == 0)
+    else if (rcvd_byte_count == 0)
     {
-        throw SimpleSocketException( SimpleSocketErrCodes::ConnectionClosedByOtherParty, "Connection Closed by remote host" );         
+        throw ConnClosedByRemoteHostException( SimpleSocketErrCodes::ConnectionClosedByOtherParty, "Connection Closed by remote host" );         
     }
 
-    return iResBytes;      
+    return rcvd_byte_count;      
 }
 
 /*!
@@ -450,8 +506,17 @@ int SimpleSocket::receiveData(char * buffer, int buffer_size, bool non_blocking 
  * </ul>
  * 
  */
-int SimpleSocket::receiveAllData(char * buffer, int & byte_count)
+int SimpleSocket::receiveAllData(char * buffer, int buffer_size, int & byte_count)
 {
+    clearLastError();
+    throwIfNotInConnectedState();
+    
+    if (buffer_size < byte_count)
+    {
+        setLastError(SimpleSocketErrCodes::InsufficientBufferSize, "Buffer Size is not sufficient to receive all data");
+        return -1;        
+    }
+    
     int iRes= 0;
     int iBytesReceived(0);
     
@@ -510,6 +575,11 @@ SimpleSocketErrCodes SimpleSocket::close()
             error = SimpleSocketErrCodes::NotConnected;
         }
     }
+    else
+    {
+        state = SimpleSocketState::NotConnected;
+        error = SimpleSocketErrCodes::Success;
+    }
     
     return error;    
 }
@@ -540,8 +610,9 @@ SimpleSocketErrCodes SimpleSocket::close()
 SimpleSocketReadyStates SimpleSocket::waitTillSocketIsReady(bool wait_for_read, bool wait_for_write, long wait_time_ms)
 {   
     clearLastError();
+    throwIfInNotConnectedState();
     
-    SimpleSocketReadyStates iRet = SimpleSocketReadyStates::ErrorWhileWaiting;        //return value of the function
+    SimpleSocketReadyStates iRet = SimpleSocketReadyStates::InterruptedWhileWaiting;        //return value of the function
     fd_set read_fd_set;   //read FD set
     fd_set write_fd_set;  //write FD set
     struct timeval * wait_timeval_struct(NULL); //time value structure to pass to select
@@ -559,9 +630,9 @@ SimpleSocketReadyStates SimpleSocket::waitTillSocketIsReady(bool wait_for_read, 
     }
     if(wait_time_ms >= 0)
     {//if timeout has been specified
-        wait_timeval_struct=new timeval; 
-        wait_timeval_struct->tv_sec=wait_time_ms/1000;
-        wait_timeval_struct->tv_usec=(wait_time_ms%1000)*1000;   
+        wait_timeval_struct = new timeval; 
+        wait_timeval_struct->tv_sec = wait_time_ms/1000;
+        wait_timeval_struct->tv_usec = (wait_time_ms % 1000) * 1000;   
     }
     //OK then, let's wait        
     int iRes = select(socket_fd+1, &read_fd_set, &write_fd_set, NULL,  wait_timeval_struct);
@@ -569,26 +640,30 @@ SimpleSocketReadyStates SimpleSocket::waitTillSocketIsReady(bool wait_for_read, 
     if(iRes<0)
     {//select returned an error   
         SimpleSocketErrCodes error_code = SimpleSocketErrCodes::GenericError;
-        switch(errno)
+        if (errno == EINTR)
         {
-            case EINTR:
-                error_code = SimpleSocketErrCodes::Interrupted; //read is may be still blocking    
-                break;
-                
-            case ENOMEM:
-                error_code = SimpleSocketErrCodes::ResourceLimitReached;
-                break;
-                
-            case EBADF:
-                error_code = SimpleSocketErrCodes::NotConnected;
-                break;   
-            default:
-                error_code = SimpleSocketErrCodes::GenericError;
-                break;
+            setLastError(SimpleSocketErrCodes::Interrupted, "Interrupted while waiting for socket");            
+            iRet = SimpleSocketReadyStates::InterruptedWhileWaiting;
         }
-        std::stringstream strm;
-        strm<<"Error waiting till socket becomes ready. System Error["<< errno <<":"<< getErrnoAsString() <<"]";
-        throw SimpleSocketException( error_code, strm.str().c_str() );           
+        else
+        {
+            switch(errno)
+            {
+                case ENOMEM:
+                    error_code = SimpleSocketErrCodes::ResourceLimitReached;
+                    break;
+
+                case EBADF:
+                    error_code = SimpleSocketErrCodes::NotConnected;
+                    break;   
+                default:
+                    error_code = SimpleSocketErrCodes::GenericError;
+                    break;
+            }
+            std::stringstream strm;
+            strm<<"Error waiting till socket becomes ready. System Error["<< errno <<":"<< getErrnoAsString() <<"]";
+            throw SimpleSocketException( error_code, strm.str().c_str() );
+        }
     }
     else if(iRes>0)
     {//select returned, positive value, that means Socket FD should be ready, for read or write    
@@ -612,12 +687,7 @@ SimpleSocketReadyStates SimpleSocket::waitTillSocketIsReady(bool wait_for_read, 
                     iRet = SimpleSocketReadyStates::ReadyForWrite;
                 }
             } 
-        }
-        else
-        {  
-            //error this can't happen, because if select returned positive value the FD should be ready          
-            assert(false);
-        }        
+        }      
     }
     else
     {//this means a timeout
@@ -657,6 +727,7 @@ std::string SimpleSocket::getConnDescription()
 void SimpleSocket::setSocketOption(SimpleSocketOptions option)
 {
     clearLastError();
+    throwIfNotInConnectedState();
     
     int flags(0);    
     int result = -1;
@@ -747,9 +818,8 @@ std::string SimpleSocket::getLastErrorString()
 std::string SimpleSocket::getErrnoAsString()
 {
     char buffer[128];
-    strerror_r(errno, buffer, 128);
     
-    return buffer;    
+    return strerror_r(errno, buffer, 128);
 }
 
 void* SimpleSocket::get_in_addr(struct sockaddr *sa)

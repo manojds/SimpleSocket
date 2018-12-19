@@ -42,6 +42,27 @@ namespace network_utils
         SimpleSocketErrCodes error;
         std::string err_str;
     };
+    
+    
+    class ConnectionFailedException: public SimpleSocketException
+    {
+    public:
+        ConnectionFailedException(SimpleSocketErrCodes error_code, const char* what_arg):
+            SimpleSocketException(error_code, what_arg)
+            {}
+            virtual ~ConnectionFailedException(){}
+    };
+    
+    class ConnClosedByRemoteHostException: public SimpleSocketException
+    {
+    public:
+        ConnClosedByRemoteHostException(SimpleSocketErrCodes error_code, const char* what_arg):
+            SimpleSocketException(error_code, what_arg)
+            {}
+            virtual ~ConnClosedByRemoteHostException(){}
+    }; 
+    
+    
 }
 
 #endif /* SIMPLESOCKETEXCEPTIONS_H */
