@@ -28,7 +28,7 @@ enum class SimpleSocketReadyStates
     ReadyForRead                    = 1,
     ReadyForWrite                   = 2,
     ReadForReadAndWrite             = 3,
-    InterruptedWhileWaiting               = 4 
+    InterruptedWhileWaiting         = 4 
 };
 
 enum class SimpleSocketErrCodes
@@ -50,7 +50,8 @@ enum class SimpleSocketErrCodes
     NotListening                    = -12,
     FailedToGetCurrentSocketOptions = -13,
     FailedToSetSocketOption         = -14,
-    InsufficientBufferSize          = -15
+    InsufficientBufferSize          = -15,
+    AlreadyConnected                = -16
     
 };
 

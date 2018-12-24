@@ -29,13 +29,12 @@ void pingPongTestForDataSize(int send_block_size)
     char read_buffer[send_block_size];
     memset(read_buffer, '\0', send_block_size);
     
-    int bytes_to_be_received = send_block_size;
-    int ret_val = client.receiveAllData(read_buffer, send_block_size, bytes_to_be_received);
+    int bytes_received = 0;
     
-    if (ret_val > 0)
-    {
-        ASSERT_EQ(memcmp(send_buffer, read_buffer, send_block_size), 0);
-    }    
+    client.receiveAllData(read_buffer, send_block_size, bytes_received);
+    
+    ASSERT_EQ(memcmp(send_buffer, read_buffer, send_block_size), 0);
+    ASSERT_EQ(bytes_received, send_block_size);    
     
     client.close();  
     

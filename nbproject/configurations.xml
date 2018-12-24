@@ -55,6 +55,7 @@
             <pElem>include</pElem>
             <pElem>src</pElem>
           </incDir>
+          <commandLine>-Wall</commandLine>
         </ccTool>
         <linkerTool>
           <commandLine>-lgtest -lpthread</commandLine>

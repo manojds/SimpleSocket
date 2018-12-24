@@ -28,13 +28,12 @@ namespace network_utils
         int  sendData(const char * buffer, int byte_count, bool non_blocking = false);
         void sendAllData(const char * buffer, int byte_count, int& sent_count);
         int receiveData(char * buffer, int buffer_size, bool non_blocking = false); 
-        int receiveAllData(char * buffer, int buffer_size, int & byte_count);
+        void receiveAllData(char * buffer, int buffer_size, int& byte_count_received);
         SimpleSocketErrCodes close();
         
         void setSocketOption(SimpleSocketOptions option);
         SimpleSocketReadyStates waitTillSocketIsReady(bool wait_for_read, bool wait_for_write, long wait_time_ms);
         
-        std::string getConnDescription();
         
         SimpleSocketErrCodes    getLastError();
         std::string             getLastErrorString();
@@ -54,9 +53,6 @@ namespace network_utils
 
         int                 socket_fd;
         SimpleSocketState   state;
-        std::string         socket_desc;        
-        
-
         
     };
 }

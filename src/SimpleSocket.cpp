@@ -32,8 +32,7 @@ using namespace network_utils;
 
 SimpleSocket::SimpleSocket():
         socket_fd(-1),
-        state(SimpleSocketState::NotConnected),
-        socket_desc("Un-named Socket")
+        state(SimpleSocketState::NotConnected)
 {
     
 }
@@ -43,51 +42,14 @@ SimpleSocket::~SimpleSocket()
 
 }
 
-void SimpleSocket::throwIfInNotConnectedState()
-{
-    if (state == SimpleSocketState::NotConnected)
-    {
-        throw SimpleSocketException(SimpleSocketErrCodes::NotConnected, "Socket is in not connected state!");
-    }    
-}
-
-void SimpleSocket::throwIfNotInConnectedState()
-{
-    if (state != SimpleSocketState::Connected)
-    {
-        throw SimpleSocketException(SimpleSocketErrCodes::NotConnected, "Socket is not connected!");
-    }
-}
-
-void SimpleSocket::throwIfInConnectedState()
-{
-    if (state == SimpleSocketState::Connected)
-    {
-        throw SimpleSocketException(SimpleSocketErrCodes::NotConnected, "Socket is already connected!");
-    }
-}
-
-void SimpleSocket::throwIfNotInListeningState()
-{
-    if (state != SimpleSocketState::Listening)
-    {
-        throw SimpleSocketException(SimpleSocketErrCodes::NotListening, "Socket is not in listening state!");
-    }
-}
 
 
 /*!
  * Connects to the specified server
- * @param [in] _sRemotePort - host name of the remote host
- * @param [in] _sRemotePort - the port of the remote host
- * @return 
- * <ul>
- * - returns the error code
- * - 0 -On Success 
- * - E_IP_PORT_RESOLVE_ERROR- Unable to resolve the specified host name and port pair
- * - E_RESOURCE_LIMIT - no resources available in the system
- * - E_FAILED_TO_CONNECT- failed to connect to the remote host
- * </ul>
+ * @param [in] server_name - host name or IP  of the remote host
+ * @param [in] port - the port of the remote host
+ * @return - void
+ * @throws - ConnectionFailedException in case of a connection failure.
  * 
  */
 void SimpleSocket::connectToServer(const std::string & server_name, const std::string & port)
@@ -159,18 +121,14 @@ void SimpleSocket::connectToServer(const std::string & server_name, const std::s
 }
 
 /*!
- *  Start to Listen for incoming connection on a specified port
- * @param [in] _sPort - the port to be listen for incoming conenction
- * @return 
- * <ul>
- * - returns the error code
- * - 0 -On Success 
- * - E_IP_PORT_RESOLVE_ERROR- the specified port is invalid
- * - E_PORT_ALREADY_INUSE - specified port is already in use
- * </ul>
+ *  Start to Listen for incoming connection on a specified port. This is not a blocking call.
+ * @param [in] port - the port to be listen for incoming connection
+ * @param [in] back_log_size - limit of number of outstanding connections in the socket's listen queue. 
+ * @return - void
+ * @throws - SimpleSocketException if failed to listen.
  * 
  */
-void SimpleSocket::listen(const std::string& port, int back_log_size)
+void SimpleSocket::listen(const std::string& port, int back_log_size /*= 10*/)
 {
     clearLastError();    
     
@@ -242,17 +200,11 @@ void SimpleSocket::listen(const std::string& port, int back_log_size)
 
 
 /*!
- *  Accepts a socket connection. if there is no connections the call would get block, in socket is blocking mode.
+ *  Accepts a socket connection. if there is no connections the call would get block, if socket is in blocking mode.
  * In non blocking mode this call would not block, if there are no connections.
- * @param [in,out] _NewConnection - New Connection will be stored in this argument if successfully accepted the connection.
- * @return 
- * <ul>
- * - returns the error code
- * - 0 -On Success 
- * - E_WOULD_BLOCK- operation is blocking
- * - E_ACCEPT_FAILED -accept call failed due to system error
- * </ul>
- * 
+ * @param [in,out] new_conn - New Connection will be stored in this argument if successfully accepted the connection.
+ * @return  returns true in case of success false otherwise.
+ * @throws - SimpleSocketException if failed to listen.
  */
 bool SimpleSocket::accept(SimpleSocket & new_conn)
 {
@@ -293,21 +245,16 @@ bool SimpleSocket::accept(SimpleSocket & new_conn)
 }
 
 /*!
- *  Sends data in the specified buffer. There is no guarantee that this function will send all the data.
- * if the socket is non blocking mode or, if _bNonBlocking is set to true, this call would not block, if the send buffer is full in the system.
- * otherwise this call would get blocked if the send buffer is full on the system
- * @param [in] _pBuffer - pointer to the buffer which holds the data to send
- * @param [in] _iByteCount - number of bytes to be sent
- * @param [in] _bNonBlocking - if set to to true , this function will send the data in non blocking mode, for this operation. default value for this argument is false.
- * @return 
- * <ul>
- * - returns the error code, on error or number of bytes actually sent on success
- * - positive value -number of bytes sent in this call
- * - E_WOULD_BLOCK- operation is blocking
- * - E_RETRY - operation is interrupted by the system, user should retry 
- * - E_SOCKET_ERROR - send failed due to socket error. user should close the Socket in case of this error
- * </ul>
- * 
+ *  Sends data in the specified buffer. There is no guarantee that this method will send all the data.
+ * if the send buffer is full in the system, this call might block.
+ * if the socket is non blocking mode or, if non_blocking is set to true, this call would not block. 
+ * If in non blocking mode, if the send buffer is full this method will return with -1 and last_error will be set to SimpleSocketErrCodes::WouldBlock
+ * Also this method might return with -1 if signal is caught while sending data. in that case last_error will be set to SimpleSocketErrCodes::Interrupted.
+ * @param [in] buffer - pointer to the buffer which holds the data to send
+ * @param [in] byte_count - number of bytes to be sent
+ * @param [in] non_blocking - if set to to true , this method will send the data in non blocking mode, for this operation. default value for this argument is false.
+ * @return -1 in case of error. otherwise number of bytes sent in this call will be returned.
+ * @throws - SimpleSocketException if failed to send. Failure cases are connection failure, connection reset by the peer etc.
  */
 int SimpleSocket::sendData(const char * buffer, int byte_count, bool non_blocking /*= false*/)
 {
@@ -324,7 +271,7 @@ int SimpleSocket::sendData(const char * buffer, int byte_count, bool non_blockin
     
     bytes_sent = send(socket_fd,buffer,byte_count,send_flags);
 
-    if(bytes_sent<0)
+    if(bytes_sent < 0)
     {
         if((errno==EAGAIN)||(errno==EWOULDBLOCK))
         {
@@ -350,7 +297,7 @@ int SimpleSocket::sendData(const char * buffer, int byte_count, bool non_blockin
             throw SimpleSocketException( SimpleSocketErrCodes::SocketError, strm.str().c_str() );             
         }
     }
-    else if(bytes_sent==0)
+    else if(bytes_sent == 0)
     {
         //Zero number of bytes have been specified to send. 
     }
@@ -361,23 +308,18 @@ int SimpleSocket::sendData(const char * buffer, int byte_count, bool non_blockin
 
 
 /*!
- *  Sends data in the buffer. This function will try to send the all the data in the buffer, 
+ *  Sends data in the buffer. This method will try to send the all the data in the buffer, 
  * it would not return until either all the data has been sent or error has occurred on the socket.
  * if the socket is non blocking mode and the send buffer is full, the thread call 
- * this function will stuck in a busy loop, till the the send buffer get available. 
- * otherwise this call would get blocked if the send buffer is full on the system
- * So it is not wise to use this function if socket has been set to non blocking mode.
- * @param [in] _pBuffer - pointer to the buffer which holds the data to send
- * @param [in,out] _iByteCount - This argument is a value result argument. 
- * this argument is used to specify the number of bytes to be sent, 
- * when this function returns it holds number of bytes actually sent, if no error occurred this will hold same value as the input value
- * @return 
- * <ul>
- * - returns the error code
- * - 0 -on success
- * - E_SOCKET_ERROR - receive failed due to socket error. user should close the Socket in case of this error
- * </ul>
- * 
+ * this method will stuck in a busy loop, till the the send buffer get available. 
+ * otherwise this call would get blocked if the send buffer is full on the system.
+ * Therefore, it is not recommended to use this method if socket has been set to non blocking mode.
+ * @param [in] buffer - pointer to the buffer which holds the data to send
+ * @param [in] byte_count - number of bytes to be sent. 
+ * @param [in,out] sent_count - This argument is a output argument.  
+ * when this method returns it holds number of bytes actually sent, if no error occurred this will hold same value as the byte_count
+ * @return void.
+ * @throws - SimpleSocketException if failed to send. Failure cases are connection failure, connection reset by the peer etc.
  */
 void SimpleSocket::sendAllData(const char * buffer, int byte_count, int& sent_count)
 {
@@ -398,44 +340,28 @@ void SimpleSocket::sendAllData(const char * buffer, int byte_count, int& sent_co
                 sent_count = sent_count+res_val;
             } 
             else
-            {
-                assert(false);
+            {//recoverable error we should continue.
+                continue;
             }
         
         }
         catch (SimpleSocketException& ex)
         {
-            if( (ex.getErrorCode() == SimpleSocketErrCodes::WouldBlock ) ||
-                    ex.getErrorCode() == SimpleSocketErrCodes::Interrupted )
-            {//if operation is blocking, or the return code is retry we should retry
-                continue;
-            }
-            else
-            {
-                throw;
-            }            
+            throw;           
         }
     }
 }
 
 /*!
- * This function can be used to receive the data from the socket. if there is no data to receive, 
- * and socket is non blocking mode this function would return immediately with error code E_WOULD_BLOCK.
+ * This method can be used to receive the data from the socket. If there is no data to receive, 
+ * and socket is non blocking mode this method would return immediately with return code -1 and last_error would be set to SimpleSocketErrCodes::WouldBlock.
  * if there is no data to receive and socket is on blocking mode this call would get blocked until the data arrives from the socket
- * or other end closes socket or error occurrs in the socket.
- * @param [in] _pBuffer - pointer to the buffer where data to be stored
- * @param [in] _iBufferSize - size of the specified buffer or , maximum number of bytes this function can receive.
- * @param [in] _bNonBlocking - if set to to true , this function will send the data in non blocking mode, for this operation. default value for this argument is false.
- * @return 
- * <ul>
- * - returns the error code
- * - 0 - Connection is closed by the other party
- * - Positive number - number of bytes actually received
- * - E_WOULD_BLOCK- operation is blocking
- * - E_RETRY - operation is interrupted by the system, user should retry 
- * - E_SOCKET_ERROR - send failed due to socket error. user should close the Socket in case of this error
- * </ul>
- * 
+ * or other end closes the socket or error occurs in the socket.
+ * @param [in] buffer - pointer to the buffer where data to be stored
+ * @param [in] buffer_size - size of the specified buffer or , maximum number of bytes this method can receive.
+ * @param [in] non_blocking - if set to to true , this method will receive data in non blocking mode, for this operation. default value for this argument is false.
+ * @return -1 in case of a recoverable failure (if the call is blocking or call is interrupted). in success, number of bytes received will be returned.
+ * @throws - ConnClosedByRemoteHostException or SimpleSocketException if failed to receive. Failure cases are connection failure, connection reset by the peer etc.
  */
 int SimpleSocket::receiveData(char * buffer, int buffer_size, bool non_blocking /* = false*/)
 {    
@@ -482,68 +408,55 @@ int SimpleSocket::receiveData(char * buffer, int buffer_size, bool non_blocking 
     {
         throw ConnClosedByRemoteHostException( SimpleSocketErrCodes::ConnectionClosedByOtherParty, "Connection Closed by remote host" );         
     }
+    //else we got some data
 
     return rcvd_byte_count;      
 }
 
 /*!
- * Receive the data from the socket. This function will try to receive exact number of bytes which is specified in the _iByteCount argument, 
+ * Receive the data from the socket. This method will try to receive exact number of bytes which is specified in the _iByteCount argument, 
  * it would not return until either _iByteCount of data has been received or error has occurred on the socket.
- * if the socket is non blocking mode and there i no data to receive, the thread call 
- * this function will stuck in a busy loop, till _iByteCount amount of bytes received. 
- * otherwise this call would get blocked if the send buffer is full on the system
- * So it is not wise to use this function if socket has been set to non blocking mode.
- * @param [in] _pBuffer - pointer to the buffer which holds the data to send
- * @param [in,out] _iByteCount - This argument is a value result argument. 
- * this argument is used to specify the number of bytes to be received, 
- * when this function returns it holds number of bytes actually received, if no error occurred this will hold same value as the input value
- * @return 
- * <ul>
- * - returns the error code
- * - 1 - on success
- * - 0 - Connection closed by other party
- * - E_SOCKET_ERROR - receive failed due to socket error. user should close the Socket in case of this error
- * </ul>
+ * if the socket is non blocking mode and there is no data to receive, the thread call 
+ * this method will stuck in a busy loop, till byte_count amount of bytes received. 
+ * otherwise this call would get blocked until required number of bytes have been received.
+ * So it is not recommended to use this method if socket has been set to non blocking mode.
+ * @param [in] buffer - pointer to the buffer where data to be stored
+ * @param [in] buffer_size - size of the specified buffer or , maximum number of bytes this method can receive. 
+ * @param [out] byte_count_received - This argument is a out argument. 
+ * when this method returns it holds number of bytes actually received. If this method successfully returned this parameter will hold same value as the buffer_size
+ * @return void
+ * @throws - ConnClosedByRemoteHostException or SimpleSocketException if failed to receive. Failure cases are connection failure, connection reset by the peer etc.
  * 
  */
-int SimpleSocket::receiveAllData(char * buffer, int buffer_size, int & byte_count)
+void SimpleSocket::receiveAllData(char * buffer, int buffer_size, int& byte_count_received)
 {
     clearLastError();
     throwIfNotInConnectedState();
+
+    byte_count_received = 0;
     
-    if (buffer_size < byte_count)
-    {
-        setLastError(SimpleSocketErrCodes::InsufficientBufferSize, "Buffer Size is not sufficient to receive all data");
-        return -1;        
-    }
-    
-    int iRes= 0;
-    int iBytesReceived(0);
-    
-    while(iBytesReceived < byte_count)
+    while(byte_count_received < buffer_size)
     {
         try
         {
-            iRes = receiveData( buffer + iBytesReceived, byte_count - iBytesReceived);
-            iBytesReceived = iBytesReceived + iRes;
+            int rcvd_count_in_last_call = receiveData( buffer + byte_count_received, buffer_size - byte_count_received);
+			
+            if (rcvd_count_in_last_call >= 0 ) 
+            {
+                byte_count_received = byte_count_received + rcvd_count_in_last_call;
+            }
+            else
+            {//recoverable error. we should continue
+                continue;
+            }
+            
         }
         catch (SimpleSocketException& ex)
         {
-            if( (ex.getErrorCode() == SimpleSocketErrCodes::WouldBlock ) ||
-                    ex.getErrorCode() == SimpleSocketErrCodes::Interrupted )
-            {//if operation is blocking, or the return code is retry we should retry
-                continue;
-            }
-            else
-            {
-                byte_count=iBytesReceived;
-                throw;
-            }            
+            throw;           
         }
     }
-    //update the number of bytes received.
-    byte_count = iBytesReceived;
-    return iRes;
+
 }
 
 /*!
@@ -551,10 +464,11 @@ int SimpleSocket::receiveAllData(char * buffer, int buffer_size, int & byte_coun
  * @return 
  * <ul>
  * - returns the error code
- * - 0 - on success
- * - E_RETRY - operation is interrupted by the system, user should retry 
- * - E_NOT_CONNECTED - socket is not connected.
+ * - SimpleSocketErrCodes::Success - on success
+ * - SimpleSocketErrCodes::Interrupted - if the call was interrupted by a signal
+ * - error = SimpleSocketErrCodes::NotConnected - if the socket is not connected.
  * </ul>
+ * @throws - nothing.
  * 
  */
 SimpleSocketErrCodes SimpleSocket::close()
@@ -587,32 +501,30 @@ SimpleSocketErrCodes SimpleSocket::close()
 
 /*!
  * Wait till the socket is get ready for receiving or sending. 
- * this function can wait for either reading or writing or for both. also time out can be specified, 
- * if neither write or read available with in the specified function will return. 
- * And this function will return immediately if one of specified scenario is available.
+ * This method can wait for either reading or writing or for both. Also a time out can be specified for the wait. 
+ * If neither write or read available with in the specified time, method will return with return code SimpleSocketReadyStates::TimeOutOccured. 
+ * And this method will return immediately if one of specified scenario is available.
  * @param [in] wait_for_read - should set to true if need to wait for read(receive)
  * @param [in] wait_for_write - should set to true if need to wait for write(send)
- * @param [in] wait_time_ms - maximum time to wait in milli seconds
+ * @param [in] wait_time_ms - maximum time to wait in milli seconds. To wait indefinitely this argument should be set to a minus value.
  * @return 
  * <ul>
- * - returns the error code
- * - 0 - timeout occurred
- * - 1 - read is ready
- * - 2 - write is ready
- * - 3 - both read and write is ready
- * - E_RETRY - operation is interrupted by the system, user should retry 
- * - E_NOT_CONNECTED - socket is not connected.
- * - E_RESOURCE_LIMIT - no resources available in the system
- * - E_GENERIC - system error occurred waiting
+ * - returns the ready state
+ * - SimpleSocketReadyStates::InterruptedWhileWaiting - if interrupted by a signal while waiting
+ * - SimpleSocketReadyStates::ReadyForRead - socket is ready for read 
+ * - SimpleSocketReadyStates::ReadyForWrite - socket is ready for  write
+ * - SimpleSocketReadyStates::ReadForReadAndWrite - socket is ready for  both read and write
  * </ul>
- * 
+* @throws - SimpleSocketException will be thrown in case of a non recoverable error. 
+ * For an example, trying to wait on a not connected socket will result in a exception.
  */
 SimpleSocketReadyStates SimpleSocket::waitTillSocketIsReady(bool wait_for_read, bool wait_for_write, long wait_time_ms)
 {   
     clearLastError();
     throwIfInNotConnectedState();
     
-    SimpleSocketReadyStates iRet = SimpleSocketReadyStates::InterruptedWhileWaiting;        //return value of the function
+    SimpleSocketReadyStates ret_val = SimpleSocketReadyStates::InterruptedWhileWaiting;        //return value of the method
+    
     fd_set read_fd_set;   //read FD set
     fd_set write_fd_set;  //write FD set
     struct timeval * wait_timeval_struct(NULL); //time value structure to pass to select
@@ -637,13 +549,13 @@ SimpleSocketReadyStates SimpleSocket::waitTillSocketIsReady(bool wait_for_read, 
     //OK then, let's wait        
     int iRes = select(socket_fd+1, &read_fd_set, &write_fd_set, NULL,  wait_timeval_struct);
 
-    if(iRes<0)
+    if(iRes < 0)
     {//select returned an error   
         SimpleSocketErrCodes error_code = SimpleSocketErrCodes::GenericError;
         if (errno == EINTR)
         {
             setLastError(SimpleSocketErrCodes::Interrupted, "Interrupted while waiting for socket");            
-            iRet = SimpleSocketReadyStates::InterruptedWhileWaiting;
+            ret_val = SimpleSocketReadyStates::InterruptedWhileWaiting;
         }
         else
         {
@@ -671,54 +583,46 @@ SimpleSocketReadyStates SimpleSocket::waitTillSocketIsReady(bool wait_for_read, 
         {
             if(FD_ISSET(socket_fd,&read_fd_set))
             {//if read is ready
-                iRet = SimpleSocketReadyStates::ReadyForRead;
+                ret_val = SimpleSocketReadyStates::ReadyForRead;
             }
         }
         if(wait_for_write)
         {
             if(FD_ISSET(socket_fd,&write_fd_set))
             {//if write is ready
-                if(iRet == SimpleSocketReadyStates::ReadyForRead)
+                if(ret_val == SimpleSocketReadyStates::ReadyForRead)
                 {//if read is already ready
-                    iRet = SimpleSocketReadyStates::ReadForReadAndWrite;
+                    ret_val = SimpleSocketReadyStates::ReadForReadAndWrite;
                 }
                 else
                 {
-                    iRet = SimpleSocketReadyStates::ReadyForWrite;
+                    ret_val = SimpleSocketReadyStates::ReadyForWrite;
                 }
             } 
         }      
     }
     else
     {//this means a timeout
-         iRet = SimpleSocketReadyStates::TimeOutOccured;
+         ret_val = SimpleSocketReadyStates::TimeOutOccured;
     }
-    return iRet;    
+    return ret_val;    
 }
-/*!
- * Returns a description of the socket. if the socket is connected description contains IP:Port combination of the local and remote ends.
- * @return 
- * <ul>
- * - returns the error code the description
- * </ul>
- * 
- */
-std::string SimpleSocket::getConnDescription()
-{
-    return socket_desc;
-}
+
 /*!
  * Sets the options for socket. Options should be set after socket is connected.
- * @param [in] _tOption - option to be set. 
+ * @param [in] option - option to be set. 
  * 
  * <ul>
  * - following are the options supported
- * - NON_BLOCKING - if this is passed as argument socket will be set to non blocking. all the send and receive operations after that will not be blocked for I/O.
- * In non blocking mode, send or receive operation cannot be performed because I/O is not ready the send and received functions will return with error code E_WOULD_BLOCK
- * - BLOCKING - if this is passed as argument socket will be set to blocking. this is the default behaviour of the socket. this option is complementary to NON_BLOCKING option
- * In non blocking mode, send or receive operation cannot be performed because I/O is not ready, send and received functions will get blocked.
+ * - SimpleSocketOptions::NonBlocking - if this is passed as argument socket will be set to non blocking. 
+ * All the send and receive operations after that will not be blocked for I/O.
+ * In non blocking mode, send or receive operation cannot be performed because I/O is not ready the send and received functions will 
+ * return with error code SimpleSocketErrCodes::WouldBlock
+ * - SimpleSocketOptions::Blocking - if this is passed as argument socket will be set to blocking. 
+ * This is the default behavior of the socket. This option is complementary to SimpleSocketOptions::NonBlocking option
+ * In blocking mode, if send or receive will get blocked if I/O is not ready.
  * - FLUSH_IMMEDIATELY - this option is used to flush the data in the send buffer immediately after a data send. by default this option is disabled.
- * That means TCP may hold data for some time with out sending even after Send function returns
+ * That means TCP may hold data for some time with out sending even after Send method returns
  * </ul>
  * 
  * @return 
@@ -770,6 +674,39 @@ void SimpleSocket::setSocketOption(SimpleSocketOptions option)
     }
     
 }
+
+void SimpleSocket::throwIfInNotConnectedState()
+{
+    if (state == SimpleSocketState::NotConnected)
+    {
+        throw SimpleSocketException(SimpleSocketErrCodes::NotConnected, "Socket is in not connected state!");
+    }    
+}
+
+void SimpleSocket::throwIfNotInConnectedState()
+{
+    if (state != SimpleSocketState::Connected)
+    {
+        throw SimpleSocketException(SimpleSocketErrCodes::NotConnected, "Socket is not connected!");
+    }
+}
+
+void SimpleSocket::throwIfInConnectedState()
+{
+    if (state == SimpleSocketState::Connected)
+    {
+        throw SimpleSocketException(SimpleSocketErrCodes::AlreadyConnected, "Socket is already connected!");
+    }
+}
+
+void SimpleSocket::throwIfNotInListeningState()
+{
+    if (state != SimpleSocketState::Listening)
+    {
+        throw SimpleSocketException(SimpleSocketErrCodes::NotListening, "Socket is not in listening state!");
+    }
+}
+
 
 int SimpleSocket::getCurrentFDStutusFlags()
 {

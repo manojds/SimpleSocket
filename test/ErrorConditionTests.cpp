@@ -38,9 +38,22 @@ TEST(ErrorConditionTests, TryingToConnectAlreadyConenctedSocket)
     echo_server.startThread(TestUtils::server_port);
     
     SimpleSocket client;
-    client.connectToServer(TestUtils::server_ip, TestUtils::server_port);    
+    client.connectToServer(TestUtils::server_ip, TestUtils::server_port);   
     
-    ASSERT_THROW(client.connectToServer(TestUtils::server_ip, TestUtils::server_port), SimpleSocketException);    
+    try
+    {
+        client.connectToServer(TestUtils::server_ip, TestUtils::server_port);
+        FAIL() << "Expected SimpleSocketException exception..but not received.";
+    }
+    catch (SimpleSocketException& ex)
+    {
+        EXPECT_EQ(ex.getErrorCode(), SimpleSocketErrCodes::AlreadyConnected);        
+    }
+    catch(...)
+    {
+        FAIL() << "Expected SimpleSocketException exception..but received another";
+    }
+      
     
     echo_server.stopServer();
 }
@@ -49,9 +62,21 @@ TEST(ErrorConditionTests, TryingToReceiveOnNotConnectedSocket)
 {    
     SimpleSocket client;
     int buffer_size = 1024;
-    char buffer[buffer_size];
+    char buffer[buffer_size];    
     
-    ASSERT_THROW(client.receiveData(buffer, buffer_size), SimpleSocketException);    
+    try
+    {
+        client.receiveData(buffer, buffer_size);
+        FAIL() << "Expected SimpleSocketException exception..but not received.";
+    }
+    catch (SimpleSocketException& ex)
+    {
+        EXPECT_EQ(ex.getErrorCode(), SimpleSocketErrCodes::NotConnected);        
+    }
+    catch(...)
+    {
+        FAIL() << "Expected SimpleSocketException exception..but received another";
+    }    
 }
 
 
