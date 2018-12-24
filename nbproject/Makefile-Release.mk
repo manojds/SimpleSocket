@@ -35,9 +35,9 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
-	${OBJECTDIR}/src/EchoServer.o \
 	${OBJECTDIR}/src/SimpleSocket.o \
 	${OBJECTDIR}/src/main.o \
+	${OBJECTDIR}/test/EchoServer.o \
 	${OBJECTDIR}/test/ErrorConditionTests.o \
 	${OBJECTDIR}/test/PingPongTest.o \
 	${OBJECTDIR}/test/TestUtils.o
@@ -67,11 +67,6 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/simplesocket: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/simplesocket ${OBJECTFILES} ${LDLIBSOPTIONS}
 
-${OBJECTDIR}/src/EchoServer.o: src/EchoServer.cpp
-	${MKDIR} -p ${OBJECTDIR}/src
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/EchoServer.o src/EchoServer.cpp
-
 ${OBJECTDIR}/src/SimpleSocket.o: src/SimpleSocket.cpp
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
@@ -81,6 +76,11 @@ ${OBJECTDIR}/src/main.o: src/main.cpp
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
 	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/main.o src/main.cpp
+
+${OBJECTDIR}/test/EchoServer.o: test/EchoServer.cpp
+	${MKDIR} -p ${OBJECTDIR}/test
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/test/EchoServer.o test/EchoServer.cpp
 
 ${OBJECTDIR}/test/ErrorConditionTests.o: test/ErrorConditionTests.cpp
 	${MKDIR} -p ${OBJECTDIR}/test

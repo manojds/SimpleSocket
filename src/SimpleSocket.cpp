@@ -1,5 +1,4 @@
 #include "SimpleSocket.h"
-#include "Logger.h"
 #include <sstream> 
 #include <cassert>
 #include <string.h>
@@ -17,7 +16,6 @@
 #include <unistd.h>
 
 
-#include "Logger.h"
 #include "SimpleSocketExceptions.h"
 
 namespace network_utils

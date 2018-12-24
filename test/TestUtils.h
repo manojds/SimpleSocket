@@ -15,7 +15,7 @@
 #define TESTUTILS_H
 #include <iostream>
 #include <gtest/gtest.h>
-#include <EchoServer.h>
+#include "EchoServer.h"
 #include <SimpleSocket.h>
 
 namespace simple_socket_test

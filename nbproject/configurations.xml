@@ -15,8 +15,8 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
-      <itemPath>src/EchoServer.cpp</itemPath>
-      <itemPath>src/EchoServer.h</itemPath>
+      <itemPath>test/EchoServer.cpp</itemPath>
+      <itemPath>test/EchoServer.h</itemPath>
       <itemPath>test/ErrorConditionTests.cpp</itemPath>
       <itemPath>test/PingPongTest.cpp</itemPath>
       <itemPath>src/SimpleSocket.cpp</itemPath>
@@ -62,13 +62,13 @@
       </item>
       <item path="include/SimpleSocketExceptions.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="src/EchoServer.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="src/EchoServer.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="src/SimpleSocket.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/main.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="test/EchoServer.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="test/EchoServer.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="test/ErrorConditionTests.cpp" ex="false" tool="1" flavor2="0">
       </item>
@@ -105,13 +105,13 @@
       </item>
       <item path="include/SimpleSocketExceptions.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="src/EchoServer.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="src/EchoServer.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="src/SimpleSocket.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/main.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="test/EchoServer.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="test/EchoServer.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="test/ErrorConditionTests.cpp" ex="false" tool="1" flavor2="0">
       </item>
