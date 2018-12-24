@@ -1,0 +1,2 @@
+- Make error hanlding more efficient
+- Add a class to enable waiting on multiple sockets at once. 
