@@ -4,12 +4,9 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
-      <itemPath>include/LogFactory.h</itemPath>
-      <itemPath>include/LogSinkInterface.h</itemPath>
       <itemPath>include/SimpleScoketDefs.h</itemPath>
       <itemPath>include/SimpleSocket.h</itemPath>
       <itemPath>include/SimpleSocketExceptions.h</itemPath>
-      <itemPath>test/TestUtils.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles"
                    displayName="Resource Files"
@@ -18,15 +15,13 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
-      <itemPath>src/DefaultLogSink.h</itemPath>
       <itemPath>src/EchoServer.cpp</itemPath>
       <itemPath>src/EchoServer.h</itemPath>
       <itemPath>test/ErrorConditionTests.cpp</itemPath>
-      <itemPath>src/LogFactory.cpp</itemPath>
-      <itemPath>src/Logger.h</itemPath>
       <itemPath>test/PingPongTest.cpp</itemPath>
       <itemPath>src/SimpleSocket.cpp</itemPath>
       <itemPath>test/TestUtils.cpp</itemPath>
+      <itemPath>test/TestUtils.h</itemPath>
       <itemPath>src/main.cpp</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
@@ -61,25 +56,15 @@
           <commandLine>-lgtest -lpthread</commandLine>
         </linkerTool>
       </compileType>
-      <item path="include/LogFactory.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="include/LogSinkInterface.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="include/SimpleScoketDefs.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="include/SimpleSocket.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="include/SimpleSocketExceptions.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="src/DefaultLogSink.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="src/EchoServer.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/EchoServer.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="src/LogFactory.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="src/Logger.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/SimpleSocket.cpp" ex="false" tool="1" flavor2="0">
       </item>
@@ -114,25 +99,15 @@
           <developmentMode>5</developmentMode>
         </asmTool>
       </compileType>
-      <item path="include/LogFactory.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="include/LogSinkInterface.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="include/SimpleScoketDefs.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="include/SimpleSocket.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="include/SimpleSocketExceptions.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="src/DefaultLogSink.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="src/EchoServer.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/EchoServer.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="src/LogFactory.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="src/Logger.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/SimpleSocket.cpp" ex="false" tool="1" flavor2="0">
       </item>

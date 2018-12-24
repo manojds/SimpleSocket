@@ -13,12 +13,10 @@
             <file>file:/mnt/d/Dev/C++/SimpleSocket/test/TestUtils.cpp</file>
             <file>file:/mnt/d/Dev/C++/SimpleSocket/src/LogFactory.cpp</file>
             <file>file:/mnt/d/Dev/C++/SimpleSocket/src/EchoServer.cpp</file>
-            <file>file:/mnt/d/Dev/C++/SimpleSocket/src/SimpleSocket.cpp</file>
             <file>file:/mnt/d/Dev/C++/SimpleSocket/include/SimpleSocket.h</file>
+            <file>file:/mnt/d/Dev/C++/SimpleSocket/src/SimpleSocket.cpp</file>
             <file>file:/mnt/d/Dev/C++/SimpleSocket/test/ErrorConditionTests.cpp</file>
-            <file>file:/mnt/d/Dev/C++/SimpleSocket/include/LogFactory.h</file>
             <file>file:/mnt/d/Dev/C++/SimpleSocket/include/SimpleScoketDefs.h</file>
-            <file>file:/mnt/d/Dev/C++/SimpleSocket/test/TestUtils.h</file>
         </group>
     </open-files>
 </project-private>

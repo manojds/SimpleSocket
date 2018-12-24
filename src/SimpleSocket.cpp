@@ -203,10 +203,10 @@ void SimpleSocket::listen(const std::string& port, int back_log_size /*= 10*/)
  *  Accepts a socket connection. if there is no connections the call would get block, if socket is in blocking mode.
  * In non blocking mode this call would not block, if there are no connections.
  * @param [in,out] new_conn - New Connection will be stored in this argument if successfully accepted the connection.
- * @return  returns true in case of success false otherwise.
- * @throws - SimpleSocketException if failed to listen.
+ * @return  returns SimpleSocketErrCodes::Success in case of success SimpleSocketErrCodes::WouldBlock in case of a failure.
+ * @throws - SimpleSocketException if failed to accept the connection.
  */
-bool SimpleSocket::accept(SimpleSocket & new_conn)
+SimpleSocketErrCodes SimpleSocket::accept(SimpleSocket & new_conn)
 {
     clearLastError();
     
@@ -226,7 +226,7 @@ bool SimpleSocket::accept(SimpleSocket & new_conn)
             //socket has been closed due to network error. So the client is not available to us.
             //there is nothing to do here.   
             setLastError(SimpleSocketErrCodes::WouldBlock, "Accept operation would block" );
-            return false;
+            return SimpleSocketErrCodes::WouldBlock;
         }
         else
         {            
@@ -241,7 +241,7 @@ bool SimpleSocket::accept(SimpleSocket & new_conn)
         new_conn.state = SimpleSocketState::Connected;
     }  
     
-    return true;
+    return SimpleSocketErrCodes::Success;
 }
 
 /*!

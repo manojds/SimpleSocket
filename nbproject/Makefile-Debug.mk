@@ -36,7 +36,6 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 # Object Files
 OBJECTFILES= \
 	${OBJECTDIR}/src/EchoServer.o \
-	${OBJECTDIR}/src/LogFactory.o \
 	${OBJECTDIR}/src/SimpleSocket.o \
 	${OBJECTDIR}/src/main.o \
 	${OBJECTDIR}/test/ErrorConditionTests.o \
@@ -72,11 +71,6 @@ ${OBJECTDIR}/src/EchoServer.o: src/EchoServer.cpp
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -Iinclude -Isrc -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/EchoServer.o src/EchoServer.cpp
-
-${OBJECTDIR}/src/LogFactory.o: src/LogFactory.cpp
-	${MKDIR} -p ${OBJECTDIR}/src
-	${RM} "$@.d"
-	$(COMPILE.cc) -g -Iinclude -Isrc -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/LogFactory.o src/LogFactory.cpp
 
 ${OBJECTDIR}/src/SimpleSocket.o: src/SimpleSocket.cpp
 	${MKDIR} -p ${OBJECTDIR}/src

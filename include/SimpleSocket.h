@@ -24,7 +24,7 @@ namespace network_utils
         
         void connectToServer(const std::string& server_name,const std::string& port);
         void listen(const std::string& port, int back_log_size = 10);
-        bool accept(SimpleSocket & _NewConnection);
+        SimpleSocketErrCodes accept(SimpleSocket & _NewConnection);
         int  sendData(const char * buffer, int byte_count, bool non_blocking = false);
         void sendAllData(const char * buffer, int byte_count, int& sent_count);
         int receiveData(char * buffer, int buffer_size, bool non_blocking = false); 
